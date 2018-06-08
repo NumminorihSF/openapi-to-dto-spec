@@ -1,0 +1,31 @@
+{
+  "name": "openapi-to-dto-spec",
+  "version": "0.0.0",
+  "description": "Generate type from openapi spec",
+  "dependencies": {
+    "@numminorihsf/json-schema-to-flow-type": "^0.4.0",
+    "humps": "^2.0.1",
+    "js-yaml": "^3.12.0",
+    "node-rest-client": "^3.1.0"
+  },
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NumminorihSF/openapi-to-dto-spec.git"
+  },
+  "keywords": [
+    "flow",
+    "flow-bin",
+    "openapi",
+    "swagger"
+  ],
+  "author": "Konstantine Petryaev <numminorihsf@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/NumminorihSF/openapi-to-dto-spec/issues"
+  },
+  "homepage": "https://github.com/NumminorihSF/openapi-to-dto-spec#readme",
+  "files": [
+    "index.js"
+  ]
+}
