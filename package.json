@@ -9,7 +9,8 @@
     "lodash": "^4.17.10",
     "node-rest-client": "^3.1.0"
   },
-  "main": "index.js",
+  "bin": "openapi-to-dto-spec.js",
+  "main": "openapi-to-dto-spec.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NumminorihSF/openapi-to-dto-spec.git"
