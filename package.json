@@ -1,6 +1,6 @@
 {
   "name": "openapi-to-dto-spec",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Generate type from openapi spec",
   "dependencies": {
     "@numminorihsf/json-schema-to-flow-type": "^0.4.0",
