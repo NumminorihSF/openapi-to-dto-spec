@@ -6,6 +6,7 @@
     "@numminorihsf/json-schema-to-flow-type": "^0.4.0",
     "humps": "^2.0.1",
     "js-yaml": "^3.12.0",
+    "lodash": "^4.17.10",
     "node-rest-client": "^3.1.0"
   },
   "main": "index.js",
