@@ -11,15 +11,18 @@ const { Client } = require('node-rest-client');
 
 const {
   API_SPEC_URL,
-  DEST = './dto-spec'
+  DEST = './dto-spec',
+  READ_MODE = false,
 } = process.env;
 
+const extraPart = READ_MODE ? 'Read' : 'Write';
 
 new Promise(getApiSpec)
   .then(yamlToJson)
   .then(camelizeJSON)
   .then(transformTypeDefsToConvention)
   .then(yamlToJson)
+  .then(transformTypeDefsToReadModeIfNeed)
   .then(jsonToTypes);
 
 function getApiSpec(resolve) {
@@ -44,12 +47,12 @@ function transformTypeDefsToConvention({ text: oldText, json }) {
 
     return currentText.split('\n').map(
       line => line.split(' ').map(word => {
-        if (word === id) return `${id}Dto`;
-        if (word === tid) return `${id}Dto`;
-        if (word === `${id}:`) return `${id}Dto:`;
-        if (word === `${tid}:`) return `${id}Dto:`;
-        if (word === `'#/definitions/${id}'`) return `'#/definitions/${id}Dto'`;
-        if (word === `'#/definitions/${tid}'`) return `'#/definitions/${id}Dto'`;
+        if (word === id) return `${id}Dto${extraPart}`;
+        if (word === tid) return `${id}Dto${extraPart}`;
+        if (word === `${id}:`) return `${id}Dto${extraPart}:`;
+        if (word === `${tid}:`) return `${id}Dto${extraPart}:`;
+        if (word === `'#/definitions/${id}'`) return `'#/definitions/${id}Dto${extraPart}'`;
+        if (word === `'#/definitions/${tid}'`) return `'#/definitions/${id}Dto${extraPart}'`;
 
         return word;
       }).join(' ')
@@ -57,6 +60,40 @@ function transformTypeDefsToConvention({ text: oldText, json }) {
   }, oldText);
 
   return Promise.resolve({ json, text });
+}
+
+function transformSchemaToReadMode(oldSchema) {
+  const schema = Object.assign({}, oldSchema);
+
+  delete schema.required;
+
+  schema.required = [];
+
+  if (schema.properties) {
+    schema.properties = Object.assign({}, oldSchema.properties);
+    Object.keys(schema.properties).forEach(key => {
+      if (!schema.properties[key].nullable && !schema.properties[key]['x-nullable']) {
+        schema.required.push(key);
+      }
+      schema.properties[key] = transformSchemaToReadMode(schema.properties[key]);
+    });
+  }
+
+  return schema;
+}
+
+function transformTypeDefsToReadModeIfNeed({ text, json: oldJson }) {
+  if (!READ_MODE) return Promise.resolve({ text, json: oldJson });
+
+  const json = Object.assign({}, oldJson);
+
+  json.definitions = {};
+
+  Object.keys(oldJson.definitions).forEach(key => {
+    json.definitions[key] = transformSchemaToReadMode(oldJson.definitions[key]);
+  });
+
+  return Promise.resolve({ text, json });
 }
 
 function jsonToTypes({ json }) {
@@ -96,7 +133,7 @@ function jsonToTypes({ json }) {
         content: [
         '// @flow',
           `${importLines}\n`,
-          flowCode
+          READ_MODE ? flowCode.replace(/\?: /g, ': null | ') : flowCode,
         ].filter(val => val.trim()).join('\n')
       };
     })
@@ -114,5 +151,5 @@ function jsonToTypes({ json }) {
 }
 
 function getDtosFromFile(content, id) {
-  return content.split(/\b/).filter(word => word.endsWith('Dto')).filter(name => name !== id);
+  return content.split(/\b/).filter(word => word.endsWith(`Dto${extraPart}`)).filter(name => name !== id);
 }
