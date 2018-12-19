@@ -23,6 +23,7 @@ new Promise(getApiSpec)
   .then(transformTypeDefsToConvention)
   .then(yamlToJson)
   .then(transformTypeDefsToReadModeIfNeed)
+  .then(transformTypeDefsToWriteModeIfNeed)
   .then(jsonToTypes);
 
 function getApiSpec(resolve) {
@@ -74,6 +75,13 @@ function transformSchemaToReadMode(oldSchema) {
     Object.keys(schema.properties).forEach(key => {
       if (!schema.properties[key].nullable && !schema.properties[key]['x-nullable']) {
         schema.required.push(key);
+      } else {
+        schema.properties[key] = {
+          oneOf: [
+            { type: 'null' },
+            schema.properties[key],
+          ]
+        }
       }
       schema.properties[key] = transformSchemaToReadMode(schema.properties[key]);
     });
@@ -94,6 +102,43 @@ function transformSchemaToReadMode(oldSchema) {
   return schema;
 }
 
+function transformSchemaToWriteMode(oldSchema) {
+  const schema = Object.assign({}, oldSchema);
+
+  delete schema.required;
+
+  schema.required = [];
+
+  if (schema.properties) {
+    schema.properties = Object.assign({}, oldSchema.properties);
+    Object.keys(schema.properties).forEach(key => {
+      if (schema.properties[key].nullable || schema.properties[key]['x-nullable']) {
+        schema.properties[key] = {
+          oneOf: [
+            { type: 'null' },
+            schema.properties[key],
+          ]
+        }
+      }
+      schema.properties[key] = transformSchemaToWriteMode(schema.properties[key]);
+    });
+  }
+
+  if (schema.allOf) {
+    schema.allOf = schema.allOf.map(schema => transformSchemaToWriteMode(schema));
+  }
+
+  if (schema.oneOf) {
+    schema.oneOf = schema.oneOf.map(schema => transformSchemaToWriteMode(schema));
+  }
+
+  if (schema.anyOf) {
+    schema.anyOf = schema.anyOf.map(schema => transformSchemaToWriteMode(schema));
+  }
+
+  return schema;
+}
+
 function transformTypeDefsToReadModeIfNeed({ text, json: oldJson }) {
   if (!READ_MODE) return Promise.resolve({ text, json: oldJson });
 
@@ -103,6 +148,20 @@ function transformTypeDefsToReadModeIfNeed({ text, json: oldJson }) {
 
   Object.keys(oldJson.definitions).forEach(key => {
     json.definitions[key] = transformSchemaToReadMode(oldJson.definitions[key]);
+  });
+
+  return Promise.resolve({ text, json });
+}
+
+function transformTypeDefsToWriteModeIfNeed({ text, json: oldJson }) {
+  if (READ_MODE) return Promise.resolve({ text, json: oldJson });
+
+  const json = Object.assign({}, oldJson);
+
+  json.definitions = {};
+
+  Object.keys(oldJson.definitions).forEach(key => {
+    json.definitions[key] = transformSchemaToWriteMode(oldJson.definitions[key]);
   });
 
   return Promise.resolve({ text, json });
@@ -145,7 +204,7 @@ function jsonToTypes({ json }) {
         content: [
         '// @flow',
           `${importLines}\n`,
-          READ_MODE ? flowCode.replace(/\?: /g, ': null | ') : flowCode,
+          READ_MODE ? flowCode.replace(/\?: /g, ': null | ').replace(/\bnull\s*\|\s*null\b/g, 'null') : flowCode,
         ].filter(val => val.trim()).join('\n')
       };
     })
