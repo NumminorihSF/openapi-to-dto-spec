@@ -79,6 +79,18 @@ function transformSchemaToReadMode(oldSchema) {
     });
   }
 
+  if (schema.allOf) {
+    schema.allOf = schema.allOf.map(schema => transformSchemaToReadMode(schema));
+  }
+
+  if (schema.oneOf) {
+    schema.oneOf = schema.oneOf.map(schema => transformSchemaToReadMode(schema));
+  }
+
+  if (schema.anyOf) {
+    schema.anyOf = schema.anyOf.map(schema => transformSchemaToReadMode(schema));
+  }
+
   return schema;
 }
 
