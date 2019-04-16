@@ -63,6 +63,48 @@ function transformTypeDefsToConvention({ text: oldText, json }) {
   return Promise.resolve({ json, text });
 }
 
+const EXTRA_PROPERTIES_IN_MULTIPLE = [
+    'title'
+];
+
+function transformSchemaToRemoveExtraProperties(oldSchema, isMultiple = false) {
+  const schema = Object.assign({}, oldSchema);
+
+  EXTRA_PROPERTIES_IN_MULTIPLE.forEach(propertyName => {
+    delete schema[propertyName];
+  });
+
+  if (schema.properties) {
+    schema.properties = Object.assign({}, oldSchema.properties);
+    Object.keys(schema.properties).forEach(key => {
+      if (!schema.properties[key].nullable && !schema.properties[key]['x-nullable']) {
+        schema.required.push(key);
+      } else {
+        schema.properties[key] = {
+          oneOf: [
+            { type: 'null' },
+            schema.properties[key],
+          ]
+        }
+      }
+      schema.properties[key] = transformSchemaToRemoveExtraProperties(schema.properties[key]);
+    });
+  }
+
+  if (schema.allOf) {
+    schema.allOf = schema.allOf.map(schema => transformSchemaToRemoveExtraProperties(schema, true));
+  }
+
+  if (schema.oneOf) {
+    schema.oneOf = schema.oneOf.map(schema => transformSchemaToRemoveExtraProperties(schema, true));
+  }
+
+  if (schema.anyOf) {
+    schema.anyOf = schema.anyOf.map(schema => transformSchemaToRemoveExtraProperties(schema, true));
+  }
+
+  return schema;
+}
 function transformSchemaToReadMode(oldSchema) {
   const schema = Object.assign({}, oldSchema);
 
@@ -147,7 +189,7 @@ function transformTypeDefsToReadModeIfNeed({ text, json: oldJson }) {
   json.definitions = {};
 
   Object.keys(oldJson.definitions).forEach(key => {
-    json.definitions[key] = transformSchemaToReadMode(oldJson.definitions[key]);
+    json.definitions[key] = transformSchemaToRemoveExtraProperties(transformSchemaToReadMode(oldJson.definitions[key]));
   });
 
   return Promise.resolve({ text, json });
@@ -161,7 +203,7 @@ function transformTypeDefsToWriteModeIfNeed({ text, json: oldJson }) {
   json.definitions = {};
 
   Object.keys(oldJson.definitions).forEach(key => {
-    json.definitions[key] = transformSchemaToWriteMode(oldJson.definitions[key]);
+    json.definitions[key] = transformSchemaToRemoveExtraProperties(transformSchemaToWriteMode(oldJson.definitions[key]));
   });
 
   return Promise.resolve({ text, json });
