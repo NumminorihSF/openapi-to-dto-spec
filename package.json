@@ -6,7 +6,7 @@
     "@numminorihsf/json-schema-to-flow-type": "^0.4.0",
     "humps": "^2.0.1",
     "js-yaml": "^3.13.1",
-    "lodash": "^4.17.11",
+    "lodash": "^4.17.21",
     "node-rest-client": "^3.1.0"
   },
   "bin": "openapi-to-dto-spec.js",
