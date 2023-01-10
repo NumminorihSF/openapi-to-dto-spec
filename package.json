@@ -7,7 +7,7 @@
     "humps": "^2.0.1",
     "js-yaml": "3.14.1",
     "lodash": "^4.17.11",
-    "node-rest-client": "^3.1.0"
+    "node-rest-client": "^3.1.1"
   },
   "bin": "openapi-to-dto-spec.js",
   "main": "openapi-to-dto-spec.js",
